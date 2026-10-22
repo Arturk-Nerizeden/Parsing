@@ -11,7 +11,7 @@ A Chrome Manifest V3 extension for researching X audiences through the **officia
 
 To package a ZIP, run `npm run package`. The file is written under `release/`. Extract the ZIP before using **Load unpacked**.
 
-If collection reports a network error, open **API settings → Test connection**. It makes one request without a key and one with a fixed invalid test key; it never uses your stored key. A `400`, `401`, or `403` response still proves the relevant request reached the server. This check distinguishes basic extension access from trouble with the `ApiKey` header. If both checks receive HTTP responses but **Check quota** fails, verify that you entered a real, single-line Sorsa key. Never share request headers or your key.
+If collection reports a network error, open **API settings → Test connection**. It makes one request without a key and one through the same API client as **Check quota**, using a fixed invalid test key; it never uses your stored key. A `400`, `401`, or `403` response still proves the relevant request reached the server. This check distinguishes basic extension access from trouble in the normal request path. If both checks receive HTTP responses but **Check quota** fails, verify that you entered a real, single-line Sorsa key. Never share request headers or your key.
 
 The `webRequest` permission is scoped by the Sorsa host permission. It lets the dashboard append Chrome's network error code to a failed API request. The extension does not inspect request headers or bodies, and does not save these error codes.
 

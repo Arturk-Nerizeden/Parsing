@@ -36,7 +36,8 @@ try {
     const parsed = new URL(url);
     assert.equal(parsed.host, 'api.sorsa.io');
     assert.equal(init.credentials, 'omit');
-    assert.equal(init.redirect, init.headers?.ApiKey === 'test-key' ? 'manual' : 'error');
+    assert.equal(init.redirect, 'error');
+    if (init.headers) assert.deepEqual(Object.keys(init.headers), ['ApiKey']);
     calls.push(parsed.pathname);
     if (!init.headers) {
       assert.equal(parsed.pathname, '/v3/key-usage-info');
@@ -80,7 +81,7 @@ try {
   });
   await page.goto(`http://127.0.0.1:${address.port}/dashboard.html`);
   await page.locator('#testConnection').click();
-  await page.waitForFunction(() => document.querySelector('#connectionResult')?.textContent?.includes('HTTP 403 with an invalid test key'));
+  await page.waitForFunction(() => document.querySelector('#connectionResult')?.textContent?.includes('HTTP 403 with an invalid test key through the normal API client'));
   await page.locator('#apiKey').fill('test-key');
   await page.locator('#saveKey').click();
   await page.locator('#checkQuota').click();

@@ -63,11 +63,9 @@ export class SorsaClient {
     const url = new URL(endpoint, BASE);
     for (const [name, value] of Object.entries(params)) url.searchParams.set(name, value);
     const requestOptions: RequestInit = {
-      method: 'GET', headers: { ApiKey: this.key, Accept: 'application/json' },
-      credentials: 'omit', redirect: 'manual', referrerPolicy: 'no-referrer', cache: 'no-store', signal
+      method: 'GET', headers: { ApiKey: this.key },
+      credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer', cache: 'no-store', signal
     };
-    try { new Request(url.toString(), requestOptions); }
-    catch { throw new ApiError('The API request could not be constructed. Check the saved key for unsupported characters.', null); }
     for (let attempt = 0; attempt < 3; attempt++) {
       if (signal?.aborted) throw signal.reason;
       await this.onAttempt?.();

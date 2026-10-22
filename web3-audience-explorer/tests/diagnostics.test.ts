@@ -6,12 +6,13 @@ describe('connection check', () => {
     const fetcher = vi.fn(async () => new Response('{"message":"missing key in request header"}', { status: 401 }));
     const result = await testConnection(fetcher as typeof fetch);
     expect(result.reachable).toBe(true);
-    expect(result.message).toContain('HTTP 401 without a key and HTTP 401 with an invalid test key');
+    expect(result.message).toContain('HTTP 401 without a key and HTTP 401 with an invalid test key through the normal API client');
     const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.sorsa.io/v3/key-usage-info');
     expect(init.headers).toBeUndefined();
     expect(init.credentials).toBe('omit');
     expect((fetcher.mock.calls[1] as unknown as [string, RequestInit])[1].headers).toEqual({ ApiKey: 'invalid-diagnostic-key' });
+    expect((fetcher.mock.calls[1] as unknown as [string, RequestInit])[1].redirect).toBe('error');
   });
 
   it('reports a blocked extension request without exposing the browser error', async () => {
@@ -23,10 +24,10 @@ describe('connection check', () => {
 
   it('distinguishes a blocked ApiKey header from general connectivity', async () => {
     const fetcher = vi.fn().mockResolvedValueOnce(new Response('', { status: 403 }))
-      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      .mockRejectedValue(new TypeError('Failed to fetch'));
     const result = await testConnection(fetcher);
     expect(result.reachable).toBe(true);
-    expect(result.message).toContain('test ApiKey header failed');
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(result.message).toContain('normal API client could not get an HTTP response');
+    expect(fetcher).toHaveBeenCalledTimes(4);
   });
 });

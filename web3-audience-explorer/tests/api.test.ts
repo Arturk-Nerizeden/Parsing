@@ -12,16 +12,16 @@ describe('Sorsa requests and errors', () => {
     await new SorsaClient('private-test-key', fetcher as typeof fetch).followers('solana', null);
     const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://api.sorsa.io/v3/followers?username=solana');
-    expect(init.headers).toMatchObject({ ApiKey: 'private-test-key' });
+    expect(init.headers).toEqual({ ApiKey: 'private-test-key' });
     expect(init.credentials).toBe('omit');
-    expect(init.redirect).toBe('manual');
+    expect(init.redirect).toBe('error');
     expect(url).not.toContain('private-test-key');
   });
   it('reports a redirect without forwarding the key', async () => {
     const fetcher = vi.fn(async () => new Response(null, { status: 302, headers: { Location: 'https://other.example/' } }));
     await expect(new SorsaClient('key', fetcher as typeof fetch).usage()).rejects.toThrow(/redirected/);
     expect(fetcher).toHaveBeenCalledTimes(1);
-    expect((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].redirect).toBe('manual');
+    expect((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].redirect).toBe('error');
   });
   it('honors Retry-After on 429 and retries at most twice', async () => {
     const fetcher = vi.fn().mockResolvedValueOnce(response(429, {}, { 'Retry-After': '3' }))
