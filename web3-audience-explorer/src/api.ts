@@ -70,12 +70,15 @@ export class SorsaClient {
       try {
         response = await this.fetcher(url.toString(), {
           method: 'GET', headers: { ApiKey: this.key, Accept: 'application/json' },
-          credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer', cache: 'no-store', signal
+          credentials: 'omit', redirect: 'manual', referrerPolicy: 'no-referrer', cache: 'no-store', signal
         });
       } catch (error) {
         if (signal?.aborted) throw signal.reason;
         if (attempt < 2) { await this.sleeper(1000 * 2 ** attempt, signal); continue; }
-        throw new ApiError('Network error reaching api.sorsa.io. Check connection and extension host permission; collection is paused.', null);
+        throw new ApiError('Request to api.sorsa.io ended before an HTTP response. A browser rule, proxy, or redirect may have blocked it. Your saved collection can be resumed.', null);
+      }
+      if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+        throw new ApiError('Sorsa redirected the authenticated request. The API key was not forwarded. Check that this key has API access or contact Sorsa support.', response.status || null);
       }
       if (response.ok) {
         try {

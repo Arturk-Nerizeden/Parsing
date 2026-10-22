@@ -18,6 +18,7 @@ const button = (id: string) => el<HTMLButtonElement>(id);
 let selected: Collection | null = null;
 let accounts: Account[] = [];
 let quota: Usage | null = null;
+let quotaChecking = false;
 let hasKey = false;
 let controller: AbortController | null = null;
 let activity: 'collection' | 'scores' | null = null;
@@ -64,7 +65,7 @@ function updateButtons() {
   button('deleteButton').disabled = running || !selected;
   button('saveKey').disabled = running;
   button('forgetKey').disabled = running;
-  button('checkQuota').disabled = running;
+  button('checkQuota').disabled = running || quotaChecking;
   button('testConnection').disabled = running;
 }
 function renderStats() {
@@ -172,12 +173,17 @@ async function selectCollection(id: string) {
   await loadAccounts(); renderStats(); await renderCollectionList();
 }
 async function checkQuota() {
+  if (quotaChecking) return;
+  quotaChecking = true;
+  updateButtons();
+  notice('Checking Sorsa quota with your saved API key…');
   try {
     quota = await (await client()).usage();
     renderStats();
     notice(quota.remaining_requests === null ? 'Sorsa did not return a remaining-request count.'
       : `${formatNumber(quota.remaining_requests)} Sorsa API requests remain as of this check.`, 'info');
   } catch (error) { showError(error); }
+  finally { quotaChecking = false; updateButtons(); }
 }
 function showError(error: unknown) {
   notice(error instanceof Error ? error.message : 'Unexpected error. Check your connection and try again.', 'error');

@@ -14,8 +14,14 @@ describe('Sorsa requests and errors', () => {
     expect(url).toBe('https://api.sorsa.io/v3/followers?username=solana');
     expect(init.headers).toMatchObject({ ApiKey: 'private-test-key' });
     expect(init.credentials).toBe('omit');
-    expect(init.redirect).toBe('error');
+    expect(init.redirect).toBe('manual');
     expect(url).not.toContain('private-test-key');
+  });
+  it('reports a redirect without forwarding the key', async () => {
+    const fetcher = vi.fn(async () => new Response(null, { status: 302, headers: { Location: 'https://other.example/' } }));
+    await expect(new SorsaClient('key', fetcher as typeof fetch).usage()).rejects.toThrow(/redirected/);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].redirect).toBe('manual');
   });
   it('honors Retry-After on 429 and retries at most twice', async () => {
     const fetcher = vi.fn().mockResolvedValueOnce(response(429, {}, { 'Retry-After': '3' }))
@@ -37,7 +43,7 @@ describe('Sorsa requests and errors', () => {
   it('retries network failures twice and reports a pause without leaking the key', async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error('private-test-key leaked by upstream'));
     const client = new SorsaClient('private-test-key', fetcher, async () => {});
-    await expect(client.followers('xrp', null)).rejects.toThrow(/Network error/);
+    await expect(client.followers('xrp', null)).rejects.toThrow(/before an HTTP response/);
     expect(fetcher).toHaveBeenCalledTimes(3);
   });
   it('treats a quota response as a snapshot, preserving only documented values', async () => {
