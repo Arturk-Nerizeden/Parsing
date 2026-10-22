@@ -313,7 +313,7 @@ function wire() {
     try {
       const result = await testConnection();
       text('connectionResult', result.message);
-      notice(result.message, result.reachable ? 'info' : 'error');
+      notice(result.message, result.severity);
     } finally { updateButtons(); }
   });
   button('exportButton').addEventListener('click', exportCSV);

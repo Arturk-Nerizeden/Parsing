@@ -53,6 +53,9 @@ export class SorsaClient {
   constructor(private readonly key: string, private readonly fetcher: Fetcher = fetch,
     private readonly sleeper: Sleeper = sleep, private readonly onAttempt?: () => Promise<void>) {
     if (!key.trim()) throw new Error('Enter your Sorsa API key.');
+    if (/^https?:\/\//i.test(key.trim())) throw new Error('This looks like an endpoint URL. Paste your Sorsa API key instead.');
+    try { new Headers({ ApiKey: key }); }
+    catch { throw new Error('The API key cannot be sent as an HTTP header. Paste a single-line Sorsa key without extra characters.'); }
   }
 
   private async get(endpoint: 'followers' | 'new-followers-7d' | 'score' | 'key-usage-info',

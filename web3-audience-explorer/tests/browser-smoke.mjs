@@ -41,6 +41,10 @@ try {
       assert.equal(parsed.pathname, '/v3/key-usage-info');
       return { status: 401, body: { message: 'missing key in request header' } };
     }
+    if (init.headers.ApiKey === 'invalid-diagnostic-key') {
+      assert.equal(parsed.pathname, '/v3/key-usage-info');
+      return { status: 403, body: { message: 'invalid key' } };
+    }
     assert.equal(init.headers.ApiKey, 'test-key');
     const body = parsed.pathname.endsWith('/followers') ?
       parsed.searchParams.has('next_cursor') ? { users: [{ id: '3', username: 'carol', display_name: 'Carol', followers_count: 9 }], next_cursor: null }
@@ -68,7 +72,7 @@ try {
   });
   await page.goto(`http://127.0.0.1:${address.port}/dashboard.html`);
   await page.locator('#testConnection').click();
-  await page.waitForFunction(() => document.querySelector('#connectionResult')?.textContent?.includes('HTTP 401'));
+  await page.waitForFunction(() => document.querySelector('#connectionResult')?.textContent?.includes('HTTP 403 with an invalid test key'));
   await page.locator('#apiKey').fill('test-key');
   await page.locator('#saveKey').click();
   await page.locator('#target').fill('xrp');

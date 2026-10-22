@@ -3,6 +3,10 @@ import { ApiError, SorsaClient } from '../src/api';
 
 const response = (status: number, data: unknown = {}, headers?: HeadersInit) => new Response(JSON.stringify(data), { status, headers });
 describe('Sorsa requests and errors', () => {
+  it('rejects an endpoint URL or malformed header value before making a request', () => {
+    expect(() => new SorsaClient('https://api.sorsa.io/v3/followers')).toThrow(/endpoint URL/);
+    expect(() => new SorsaClient('part-one\npart-two')).toThrow(/cannot be sent as an HTTP header/);
+  });
   it('sends the key only to the fixed Sorsa host in the ApiKey header, without cookies or redirect forwarding', async () => {
     const fetcher = vi.fn(async () => response(200, { users: [], next_cursor: null }));
     await new SorsaClient('private-test-key', fetcher as typeof fetch).followers('solana', null);
