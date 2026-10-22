@@ -32,23 +32,43 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   const calls = [];
   let quotaCalls = 0;
-  await page.exposeFunction('__mockSorsa', (url, init) => {
-    const parsed = new URL(url);
+  const dashboardOrigin = `http://127.0.0.1:${address.port}`;
+  await page.route('**/*', async route => {
+    const request = route.request();
+    const parsed = new URL(request.url());
+    if (parsed.origin === dashboardOrigin) return route.continue();
     assert.equal(parsed.host, 'api.sorsa.io');
-    assert.equal(init.credentials, 'omit');
-    assert.equal(init.redirect, 'error');
-    if (init.headers) assert.deepEqual(Object.keys(init.headers), ['ApiKey']);
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': dashboardOrigin,
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'ApiKey',
+      'Content-Type': 'application/json'
+    };
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: corsHeaders });
+    assert.equal(request.method(), 'GET');
+    const headers = await request.allHeaders();
+    assert.equal(headers.cookie, undefined);
+    assert.equal(headers.authorization, undefined);
+    assert.equal(headers.referer, undefined);
+    const respond = (status, body) => route.fulfill({ status, headers: corsHeaders, body: JSON.stringify(body) });
     calls.push(parsed.pathname);
-    if (!init.headers) {
+    if (!headers.apikey) {
       assert.equal(parsed.pathname, '/v3/key-usage-info');
-      return { status: 401, body: { message: 'missing key in request header' } };
+      return respond(403, { message: 'missing key in request header' });
     }
-    if (init.headers.ApiKey === 'invalid-diagnostic-key') {
+    if (headers.apikey === 'invalid-diagnostic-key') {
       assert.equal(parsed.pathname, '/v3/key-usage-info');
-      return { status: 403, body: { message: 'invalid key' } };
+      return respond(401, { message: 'invalid key' });
     }
-    assert.equal(init.headers.ApiKey, 'test-key');
-    if (parsed.pathname === '/v3/key-usage-info' && ++quotaCalls > 1) return { networkError: 'net::ERR_BLOCKED_BY_CLIENT' };
+    assert.equal(headers.apikey, 'test-key');
+    if (parsed.pathname === '/v3/key-usage-info' && ++quotaCalls > 1) {
+      // A normal web page lacks extension webRequest events, so deliver the
+      // event Chrome would emit while allowing native fetch to reject itself.
+      await page.evaluate(() => chrome.webRequest.onErrorOccurred.emitForTest({
+        initiator: location.origin, error: 'net::ERR_BLOCKED_BY_CLIENT'
+      }));
+      return route.abort('blockedbyclient');
+    }
     const body = parsed.pathname.endsWith('/followers') ?
       parsed.searchParams.has('next_cursor') ? { users: [{ id: '3', username: 'carol', display_name: 'Carol', followers_count: 9 }], next_cursor: null }
         : { users: [{ id: '1', username: 'alice', display_name: 'Alice', followers_count: 1500, description: 'DeFi builder' },
@@ -56,32 +76,27 @@ try {
       : parsed.pathname.endsWith('/new-followers-7d') ? { users: [{ id: '4', username: 'newuser', display_name: 'New User', followerDate: '2026-10-20T12:00:00Z' }] }
       : parsed.pathname.endsWith('/score') ? { score: parsed.searchParams.get('username') === 'alice' ? 2.5 : 1.25 }
       : { key_requests: 4, remaining_requests: 96, total_requests: 100, valid_until: '2026-12-01T00:00:00Z' };
-    return { status: 200, body };
+    return respond(200, body);
   });
   await page.addInitScript(() => {
     const values = {};
     const networkErrorListeners = [];
     window.chrome ||= {};
-    window.chrome.webRequest = { onErrorOccurred: { addListener(listener) { networkErrorListeners.push(listener); } } };
+    window.chrome.webRequest = { onErrorOccurred: {
+      addListener(listener) { networkErrorListeners.push(listener); },
+      emitForTest(details) { for (const listener of networkErrorListeners) listener(details); }
+    } };
     window.chrome.storage = { session: {
       async get(key) { return key in values ? { [key]: values[key] } : {}; },
       async set(items) { Object.assign(values, items); },
       async remove(key) { delete values[key]; }
     } };
-    const realFetch = window.fetch.bind(window);
-    window.fetch = async (url, init) => {
-      if (new URL(String(url)).host !== 'api.sorsa.io') return realFetch(url, init);
-      const response = await window.__mockSorsa(String(url), init);
-      if (response.networkError) {
-        for (const listener of networkErrorListeners) listener({ initiator: location.origin, error: response.networkError });
-        throw new TypeError('Failed to fetch');
-      }
-      return new Response(JSON.stringify(response.body), { status: response.status, headers: { 'Content-Type': 'application/json' } });
-    };
   });
-  await page.goto(`http://127.0.0.1:${address.port}/dashboard.html`);
+  await page.goto(`${dashboardOrigin}/dashboard.html`);
+  assert.match(await page.evaluate(() => Function.prototype.toString.call(window.fetch)), /\[native code\]/);
   await page.locator('#testConnection').click();
-  await page.waitForFunction(() => document.querySelector('#connectionResult')?.textContent?.includes('HTTP 403 with an invalid test key through the normal API client'));
+  await page.waitForFunction(() => document.querySelector('#connectionResult')?.textContent?.includes('HTTP 403 without a key and HTTP 401 with an invalid test key through the normal API client'))
+    .catch(async error => { throw new Error(`${error.message}; connection=${await page.locator('#connectionResult').textContent()}; calls=${JSON.stringify(calls)}`); });
   await page.locator('#apiKey').fill('test-key');
   await page.locator('#saveKey').click();
   await page.locator('#checkQuota').click();
@@ -119,8 +134,9 @@ try {
   await page.screenshot({ path: 'test-results/dashboard.png', fullPage: true });
   await page.locator('#checkQuota').click();
   await page.waitForFunction(() => document.querySelector('#notice')?.textContent?.includes('net::ERR_BLOCKED_BY_CLIENT'));
+  assert.equal(quotaCalls, 4, 'The final quota request makes three native fetch attempts.');
   assert.deepEqual(errors, []);
-  console.log('Browser smoke passed: collection, cursor, scores, filters, CSV export/import and new-followers mode.');
+  console.log('Browser smoke passed with native fetch: diagnostics, quota, collection, cursor, scores, filters, CSV export/import, new-followers mode and network errors.');
 } finally {
   await context?.close();
   server.close();

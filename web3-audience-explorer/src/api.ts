@@ -72,7 +72,9 @@ export class SorsaClient {
       this.attempts++;
       let response: Response;
       try {
-        response = await this.fetcher(url.toString(), requestOptions);
+        // Native browser fetch rejects a SorsaClient instance as its receiver.
+        const fetcher = this.fetcher;
+        response = await fetcher(url.toString(), requestOptions);
       } catch (error) {
         if (signal?.aborted) throw signal.reason;
         if (attempt < 2) { await this.sleeper(1000 * 2 ** attempt, signal); continue; }

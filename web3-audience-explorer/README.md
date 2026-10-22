@@ -11,6 +11,8 @@ A Chrome Manifest V3 extension for researching X audiences through the **officia
 
 To package a ZIP, run `npm run package`. The file is written under `release/`. Extract the ZIP before using **Load unpacked**.
 
+**Updating from 1.0.5 or earlier:** version 1.0.6 fixes a browser `fetch` invocation bug that stopped authenticated requests before they were sent and displayed a misleading network error. Replace the files in the same unpacked extension directory, click **Reload** at `chrome://extensions`, then reopen the dashboard. Keeping the same directory preserves the extension's local collections; do not uninstall it to update. Re-enter your key in **API settings** if prompted, then use **Check quota**.
+
 If collection reports a network error, open **API settings → Test connection**. It makes one request without a key and one through the same API client as **Check quota**, using a fixed invalid test key; it never uses your stored key. A `400`, `401`, or `403` response still proves the relevant request reached the server. This check distinguishes basic extension access from trouble in the normal request path. If both checks receive HTTP responses but **Check quota** fails, verify that you entered a real, single-line Sorsa key. Never share request headers or your key.
 
 The `webRequest` permission is scoped by the Sorsa host permission. It lets the dashboard append Chrome's network error code to a failed API request. The extension does not inspect request headers or bodies, and does not save these error codes.
@@ -42,7 +44,7 @@ npm run test:browser
 npm run package
 ```
 
-The unit tests exercise pagination and cursor precision, deduplication, stop/resume, API retry behavior, and CSV import/export. The browser smoke test runs the built dashboard in Chromium with local simulated Sorsa responses. For live API testing, load `dist` in Chrome and try a key with Sorsa account access. This environment may block `api.sorsa.io` and cannot verify your account's quota or live API response.
+The unit tests exercise pagination and cursor precision, deduplication, stop/resume, API retry behavior, and CSV import/export. The browser smoke test runs the built dashboard in Chromium using native browser `fetch`; Playwright intercepts the network requests to supply local simulated Sorsa responses. This catches browser invocation errors that a JavaScript fetch stub would miss. For live API testing, load `dist` in Chrome and try a key with Sorsa account access. This environment may block `api.sorsa.io` and cannot verify your account's quota or live API response.
 
 ## API basis and limits
 
