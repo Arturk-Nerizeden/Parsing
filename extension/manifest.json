@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Telegram · Username Collector",
+  "version": "1.0.0",
+  "description": "Сбор публичных username авторов, упоминаний и ссылок из открытого чата или комментариев Telegram Web.",
+  "minimum_chrome_version": "120",
+  "permissions": ["activeTab", "storage", "clipboardWrite"],
+  "action": {
+    "default_title": "Собрать юзернеймы",
+    "default_popup": "popup.html"
+  },
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://web.telegram.org/*"],
+      "js": ["bridge.js"],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://web.telegram.org/*"],
+      "js": ["core.js", "adapters.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

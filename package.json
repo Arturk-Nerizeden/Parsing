@@ -1,0 +1,17 @@
+{
+  "name": "telegram-username-collector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Chrome extension for collecting Telegram Web usernames",
+  "scripts": {
+    "test": "node --test tests/core.test.cjs",
+    "test:browser": "node --test tests/browser.test.cjs",
+    "test:extension": "node --test tests/extension.test.cjs",
+    "check": "node scripts/check.cjs",
+    "package": "python3 scripts/package.py"
+  },
+  "devDependencies": {
+    "playwright": "1.58.2"
+  },
+  "engines": { "node": ">=20" }
+}

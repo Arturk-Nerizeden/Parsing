@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Telegram · Username Collector</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="logo" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none"><path d="m3 10 18-7-7 18-4-7-7-4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m10 14 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+    <div><div class="eyebrow">TELEGRAM TOOLS</div><h1>Username Collector</h1></div>
+    <span class="local">Локально</span>
+  </header>
+  <main>
+    <section class="context"><span class="dot" id="connectionDot"></span><div><span class="caption" id="client">Ожидание Telegram</span><strong id="chat">Откройте чат или комментарии</strong></div></section>
+    <p id="help" class="help">Откройте комментарии под нужным постом или чат. Сбор начнётся с текущей позиции.</p>
+    <form id="settings">
+      <fieldset id="options">
+        <legend>Что собирать</legend>
+        <label class="choice"><input id="authors" type="checkbox" checked><span><b>Авторы сообщений</b><small>Публичные username участников · Web K</small></span></label>
+        <label class="choice"><input id="mentions" type="checkbox"><span><b>Упоминания и ссылки</b><small>@username и t.me из текста · Web K / A</small></span></label>
+        <div class="settings-row"><label><input id="bots" type="checkbox"> Включать ботов-авторов</label><label><input id="auto" type="checkbox" checked> Автопрокрутка</label></div>
+        <div class="selects"><label>Направление<select id="direction"><option value="up">↑ К старым сообщениям</option><option value="down">↓ К новым сообщениям</option></select></label><label>Лимит сообщений<select id="limit"><option value="500">500</option><option value="1000" selected>1 000</option><option value="5000">5 000</option><option value="10000">10 000</option></select></label></div>
+      </fieldset>
+      <div class="actions"><button id="start" class="primary" type="submit">Начать сбор <span>→</span></button><button id="stop" type="button" disabled>Стоп</button></div>
+    </form>
+    <section class="results" aria-label="Результаты">
+      <div class="result-heading"><div><span id="count">0</span><span class="muted"> уникальных username</span></div><span id="status" class="badge">Готов к запуску</span></div>
+      <p id="progress" class="caption">0 сообщений обработано</p>
+      <p id="note" role="status" aria-live="polite">Результаты появятся здесь.</p>
+      <p id="error" role="alert" hidden></p>
+      <div class="filter-row"><input id="search" type="search" placeholder="Поиск username" aria-label="Поиск username"><select id="source" aria-label="Источник"><option value="all">Все источники</option><option value="author">Авторы</option><option value="mention">Упоминания</option><option value="link">Ссылки</option></select></div>
+      <ul id="list" class="list"><li class="empty">Пока пусто. Выберите чат и начните сбор.</li></ul>
+      <p id="shown" class="caption"></p>
+      <div class="exports"><button id="copy" type="button" disabled>Копировать</button><button data-export="csv" type="button" disabled>CSV</button><button data-export="txt" type="button" disabled>TXT</button><button data-export="json" type="button" disabled>JSON</button><button id="clear" class="clear" type="button" disabled>Очистить</button></div>
+    </section>
+  </main>
+  <footer>Данные хранятся в браузере. Новый сбор заменяет результаты этой вкладки.</footer>
+  <script src="core.js"></script><script src="popup.js"></script>
+</body>
+</html>
