@@ -12,6 +12,7 @@ function walk(directory) {
 }
 walk(root);
 mkdirSync('release', { recursive: true });
-const target = 'release/web3-audience-explorer-v1.0.0.zip';
+const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+const target = `release/web3-audience-explorer-v${version}.zip`;
 writeFileSync(target, zipSync(files, { level: 6 }));
 console.log(target);

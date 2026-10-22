@@ -1,6 +1,7 @@
 import { ApiError, SorsaClient } from './api';
 import { collectFollowers, enrichScores } from './collector';
 import { csvText, importCSV } from './csv';
+import { testConnection } from './diagnostics';
 import { createCollection, filterAccounts, normalizeUsername } from './model';
 import type { Filters } from './model';
 import * as repository from './storage';
@@ -64,6 +65,7 @@ function updateButtons() {
   button('saveKey').disabled = running;
   button('forgetKey').disabled = running;
   button('checkQuota').disabled = running;
+  button('testConnection').disabled = running;
 }
 function renderStats() {
   text('metricCollected', formatNumber(selected?.total));
@@ -304,6 +306,16 @@ function wire() {
   button('enrichButton').addEventListener('click', () => void scores());
   button('stopButton').addEventListener('click', () => { controller?.abort(); notice(`Stopping ${activity === 'scores' ? 'score lookups' : 'collection'} at a safe checkpoint…`, 'warn'); });
   button('checkQuota').addEventListener('click', () => void checkQuota());
+  button('testConnection').addEventListener('click', async () => {
+    const control = button('testConnection');
+    control.disabled = true;
+    text('connectionResult', 'Testing extension access to the Sorsa API without a key…');
+    try {
+      const result = await testConnection();
+      text('connectionResult', result.message);
+      notice(result.message, result.reachable ? 'info' : 'error');
+    } finally { updateButtons(); }
+  });
   button('exportButton').addEventListener('click', exportCSV);
   input('importFile').addEventListener('change', () => void importFile());
   button('deleteButton').addEventListener('click', () => void removeSelected().catch(showError));

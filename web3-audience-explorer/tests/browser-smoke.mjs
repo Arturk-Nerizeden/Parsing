@@ -34,10 +34,14 @@ try {
   await page.exposeFunction('__mockSorsa', (url, init) => {
     const parsed = new URL(url);
     assert.equal(parsed.host, 'api.sorsa.io');
-    assert.equal(init.headers.ApiKey, 'test-key');
     assert.equal(init.credentials, 'omit');
     assert.equal(init.redirect, 'error');
     calls.push(parsed.pathname);
+    if (!init.headers) {
+      assert.equal(parsed.pathname, '/v3/key-usage-info');
+      return { status: 401, body: { message: 'missing key in request header' } };
+    }
+    assert.equal(init.headers.ApiKey, 'test-key');
     const body = parsed.pathname.endsWith('/followers') ?
       parsed.searchParams.has('next_cursor') ? { users: [{ id: '3', username: 'carol', display_name: 'Carol', followers_count: 9 }], next_cursor: null }
         : { users: [{ id: '1', username: 'alice', display_name: 'Alice', followers_count: 1500, description: 'DeFi builder' },
@@ -63,6 +67,8 @@ try {
     };
   });
   await page.goto(`http://127.0.0.1:${address.port}/dashboard.html`);
+  await page.locator('#testConnection').click();
+  await page.waitForFunction(() => document.querySelector('#connectionResult')?.textContent?.includes('HTTP 401'));
   await page.locator('#apiKey').fill('test-key');
   await page.locator('#saveKey').click();
   await page.locator('#target').fill('xrp');
@@ -71,7 +77,7 @@ try {
   await page.waitForFunction(() => document.querySelector('#metricCollected')?.textContent === '3')
     .catch(async error => { throw new Error(`${error.message}; notice=${await page.locator('#notice').textContent()}; calls=${JSON.stringify(calls)}; pageErrors=${JSON.stringify(errors)}`); });
   assert.equal(await page.locator('#accountsBody tr').count(), 3);
-  assert.deepEqual(calls.slice(0, 2), ['/v3/followers', '/v3/followers']);
+  assert.deepEqual(calls.filter(path => path === '/v3/followers'), ['/v3/followers', '/v3/followers']);
   await page.locator('#scoreLimit').fill('2');
   await page.locator('#enrichButton').click();
   await page.waitForFunction(() => document.querySelector('#metricRequests')?.textContent === '4');

@@ -11,6 +11,8 @@ A Chrome Manifest V3 extension for researching X audiences through the **officia
 
 To package a ZIP, run `npm run package`. The file is written under `release/`. Extract the ZIP before using **Load unpacked**.
 
+If collection reports a network error, open **API settings → Test connection**. The check sends no key and reports whether this extension receives an HTTP response from Sorsa. A `400`, `401`, or `403` from the no-key check still proves network access. If that works but **Check quota** fails, the browser or network is blocking the authenticated request; inspect the failing request's error code in the extension dashboard's DevTools Network tab. Never share its request headers or your key.
+
 ## Usage
 
 Enter an X username without `@` (for example `xrp`, `solana`, or `asterium`) and choose a mode:
