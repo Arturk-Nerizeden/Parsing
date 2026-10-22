@@ -1,4 +1,4 @@
-import { ApiError, SorsaClient } from './api';
+import { SorsaClient } from './api';
 import { collectFollowers, enrichScores } from './collector';
 import { csvText, importCSV } from './csv';
 import { testConnection } from './diagnostics';
@@ -19,12 +19,21 @@ let selected: Collection | null = null;
 let accounts: Account[] = [];
 let quota: Usage | null = null;
 let quotaChecking = false;
+let lastNetworkError: { code: string; at: number } | null = null;
 let hasKey = false;
 let controller: AbortController | null = null;
 let activity: 'collection' | 'scores' | null = null;
 let tablePage = 0;
 let noticeText = 'Ready to research with the documented Sorsa endpoints.';
 let noticeKind: 'info' | 'warn' | 'error' = 'info';
+
+// Capture only Chrome's error code for requests started by this extension.
+// Request headers, response bodies, and the API key are never inspected.
+if (chrome.webRequest?.onErrorOccurred) {
+  chrome.webRequest.onErrorOccurred.addListener(details => {
+    if (details.initiator === location.origin) lastNetworkError = { code: details.error, at: Date.now() };
+  }, { urls: ['https://api.sorsa.io/v3/*'] });
+}
 
 const statuses: Record<Collection['status'], string> = {
   paused: 'Paused · resume from the saved cursor', running: 'Collecting · safe to stop after this request',
@@ -175,6 +184,7 @@ async function selectCollection(id: string) {
 async function checkQuota() {
   if (quotaChecking) return;
   quotaChecking = true;
+  lastNetworkError = null;
   updateButtons();
   notice('Checking Sorsa quota with your saved API key…');
   try {
@@ -186,9 +196,16 @@ async function checkQuota() {
   finally { quotaChecking = false; updateButtons(); }
 }
 function showError(error: unknown) {
-  notice(error instanceof Error ? error.message : 'Unexpected error. Check your connection and try again.', 'error');
+  const message = error instanceof Error ? error.message : 'Unexpected error. Check your connection and try again.';
+  notice(withNetworkCode(message), 'error');
+}
+function withNetworkCode(message: string): string {
+  const code = message.startsWith('Request to api.sorsa.io ended') && lastNetworkError && Date.now() - lastNetworkError.at < 15_000
+    ? ` Chrome network error: ${lastNetworkError.code}.` : '';
+  return message + code;
 }
 async function perform(kind: 'collection' | 'scores', initial: Collection, api: SorsaClient, maxScoreRequests?: number) {
+  lastNetworkError = null;
   controller = new AbortController(); activity = kind;
   renderStats();
   try {
@@ -205,7 +222,7 @@ async function perform(kind: 'collection' | 'scores', initial: Collection, api: 
       selected = final; await loadAccounts();
       const message = final.error || (kind === 'scores'
         ? 'Score lookup batch finished. Missing scores are not estimated.' : statuses[final.status]);
-      notice(message, final.error ? 'error' : final.status === 'limit' ? 'warn' : 'info');
+      notice(withNetworkCode(message), final.error ? 'error' : final.status === 'limit' ? 'warn' : 'info');
     }
   } catch (error) { showError(error); }
   finally { controller = null; activity = null; renderStats(); await renderCollectionList(); }

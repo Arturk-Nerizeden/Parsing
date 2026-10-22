@@ -31,6 +31,7 @@ try {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   const calls = [];
+  let quotaCalls = 0;
   await page.exposeFunction('__mockSorsa', (url, init) => {
     const parsed = new URL(url);
     assert.equal(parsed.host, 'api.sorsa.io');
@@ -46,6 +47,7 @@ try {
       return { status: 403, body: { message: 'invalid key' } };
     }
     assert.equal(init.headers.ApiKey, 'test-key');
+    if (parsed.pathname === '/v3/key-usage-info' && ++quotaCalls > 1) return { networkError: 'net::ERR_BLOCKED_BY_CLIENT' };
     const body = parsed.pathname.endsWith('/followers') ?
       parsed.searchParams.has('next_cursor') ? { users: [{ id: '3', username: 'carol', display_name: 'Carol', followers_count: 9 }], next_cursor: null }
         : { users: [{ id: '1', username: 'alice', display_name: 'Alice', followers_count: 1500, description: 'DeFi builder' },
@@ -57,7 +59,9 @@ try {
   });
   await page.addInitScript(() => {
     const values = {};
+    const networkErrorListeners = [];
     window.chrome ||= {};
+    window.chrome.webRequest = { onErrorOccurred: { addListener(listener) { networkErrorListeners.push(listener); } } };
     window.chrome.storage = { session: {
       async get(key) { return key in values ? { [key]: values[key] } : {}; },
       async set(items) { Object.assign(values, items); },
@@ -67,6 +71,10 @@ try {
     window.fetch = async (url, init) => {
       if (new URL(String(url)).host !== 'api.sorsa.io') return realFetch(url, init);
       const response = await window.__mockSorsa(String(url), init);
+      if (response.networkError) {
+        for (const listener of networkErrorListeners) listener({ initiator: location.origin, error: response.networkError });
+        throw new TypeError('Failed to fetch');
+      }
       return new Response(JSON.stringify(response.body), { status: response.status, headers: { 'Content-Type': 'application/json' } });
     };
   });
@@ -108,6 +116,8 @@ try {
   assert.ok(calls.includes('/v3/new-followers-7d'));
   mkdirSync('test-results', { recursive: true });
   await page.screenshot({ path: 'test-results/dashboard.png', fullPage: true });
+  await page.locator('#checkQuota').click();
+  await page.waitForFunction(() => document.querySelector('#notice')?.textContent?.includes('net::ERR_BLOCKED_BY_CLIENT'));
   assert.deepEqual(errors, []);
   console.log('Browser smoke passed: collection, cursor, scores, filters, CSV export/import and new-followers mode.');
 } finally {
