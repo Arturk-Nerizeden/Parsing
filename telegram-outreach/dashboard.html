@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Telegram Outreach</title><script type="module" src="/src/dashboard.ts"></script></head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">↗</span><div>Telegram<span>OUTREACH</span></div></div>
+      <button id="newCampaign" class="primary wide" type="button">＋ Новое сообщение</button>
+      <div class="sidebar-heading">СОХРАНЁННЫЕ ОЧЕРЕДИ <span id="historyCount">0</span></div>
+      <nav id="campaignList" aria-label="Очереди сообщений"></nav>
+      <div class="sidebar-footer"><span class="local-dot"></span> Данные в этом браузере<p>v1.0.0 · Telegram MTProto API</p><button id="suppressionButton" class="text-button" type="button">Список «не писать» <span id="suppressedCount">0</span></button></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><div><span class="eyebrow">КОНТАКТЫ → ДИАЛОГИ</span><h1>Личные сообщения</h1></div><button id="connectButton" type="button"><span id="connectionDot" class="connection-dot"></span><span id="accountLabel">Подключить Telegram</span></button></header>
+      <div id="notice" class="notice" role="status" aria-live="polite">Импортируйте готовые никнеймы и подготовьте сообщение.</div>
+      <main id="main">
+        <section id="composer" aria-label="Новое сообщение">
+          <div class="compose-grid">
+            <section class="card"><div class="section-title"><span class="step">01</span><div><h2>Кому отправляем</h2><p>Готовые @username, ссылки t.me или CSV</p></div><span id="contactBadge" class="badge">0 контактов</span></div>
+              <label for="contactInput">Список контактов</label><textarea id="contactInput" rows="8" placeholder="@username_one&#10;@username_two&#10;https://t.me/username_three" spellcheck="false"></textarea>
+              <div class="inline-actions"><button id="parseContacts" type="button">Проверить список</button><label class="file-button" for="importFile">Импорт CSV / TXT<input id="importFile" type="file" accept=".csv,.txt,text/csv,text/plain"></label></div>
+              <label for="commonTags" class="top-gap">Общие теги для этого списка<input id="commonTags" placeholder="Например: партнёры, конференция"></label>
+              <p id="importReport" class="help" role="status">До 1 000 контактов. Дубли будут удалены. Существование аккаунта проверяется при отправке.</p>
+            </section>
+            <section class="card"><div class="section-title"><span class="step">02</span><div><h2>Что отправляем</h2><p>Текст или картинка с подписью</p></div><span id="messageCount" class="badge">0 / 4096</span></div>
+              <label for="messageInput">Сообщение</label><textarea id="messageInput" rows="8" placeholder="Введите текст сообщения…"></textarea>
+              <div class="token-row"><button type="button" data-token="{{username}}">＋ @username</button><button type="button" data-token="{{first_name}}">＋ Имя из CSV</button></div>
+              <div class="photo-picker"><label class="file-button" for="imageInput">＋ Добавить картинку<input id="imageInput" type="file" accept="image/jpeg,image/png,.jpg,.jpeg,.png"></label><span id="imageName">Не выбрана</span><button id="removeImage" class="text-button hidden" type="button">Убрать</button></div>
+              <p class="help">Имя берётся из столбца first_name или name. Если его нет, подставится @username.</p>
+            </section>
+          </div>
+          <section class="card preview-card"><div><div class="section-title"><span class="step">03</span><div><h2>Предпросмотр</h2><p>Проверьте текст перед созданием очереди</p></div></div><label for="previewRecipient">Получатель</label><select id="previewRecipient"><option value="">Сначала добавьте контакты</option></select></div><div class="message-preview"><span id="previewUsername" class="preview-handle">@username</span><img id="previewImage" class="preview-image hidden" alt="Картинка к сообщению"><p id="previewText">Здесь появится ваше сообщение.</p><span class="preview-foot">Предпросмотр · ещё не отправлено</span></div></section>
+          <div class="create-bar"><label for="intervalSeconds">Интервал между сообщениями, сек.<input id="intervalSeconds" type="number" min="1" max="3600" value="30"></label><p>Ограничения Telegram имеют приоритет над выбранным интервалом. Вкладка должна оставаться открытой.</p><button id="createQueue" class="primary" type="button">Создать очередь ↗</button></div>
+        </section>
+        <section id="campaignPanel" class="hidden" aria-label="Очередь отправки">
+          <div class="campaign-heading"><div><span class="eyebrow">ОЧЕРЕДЬ СООБЩЕНИЙ</span><h2 id="campaignTitle"></h2><p id="campaignMeta" class="muted"></p></div><div class="inline-actions"><button id="exportQueue" type="button">Экспорт CSV ↓</button><button id="deleteQueue" class="text-button danger" type="button">Удалить</button></div></div>
+          <div class="metrics"><div><span>ВСЕГО</span><strong id="metricTotal">0</strong></div><div><span>ОТПРАВЛЕНО</span><strong id="metricSent">0</strong></div><div><span>ОЖИДАЕТ</span><strong id="metricPending">0</strong></div><div><span>ПРОВЕРИТЬ</span><strong id="metricReview">0</strong></div><div><span>ОШИБКИ</span><strong id="metricFailed">0</strong></div></div>
+          <section class="card queue-card"><div class="queue-toolbar"><div><h3 id="queueStatus">Готово к отправке</h3><p id="queueNotice" class="help"></p></div><div class="inline-actions"><button id="pauseQueue" type="button" disabled>Пауза</button><button id="startQueue" class="primary" type="button">Начать отправку ↗</button></div></div>
+            <div class="table-controls"><label for="statusFilter">Показать<select id="statusFilter"><option value="all">Все контакты</option><option value="pending">Ожидают</option><option value="sent">Отправленные</option><option value="review">Нужна проверка</option><option value="failed">Ошибки</option><option value="skipped">Пропущенные</option></select></label><label for="tagFilter">Тег<select id="tagFilter"><option value="all">Все теги</option></select></label><p class="help">«Отправлено» означает подтверждение Telegram, без гарантии прочтения.</p></div>
+            <div class="table-scroll"><table><thead><tr><th>Получатель</th><th>Статус</th><th>Подробности</th><th>Действия</th></tr></thead><tbody id="recipientRows"></tbody></table></div><div class="pagination"><span id="pageInfo"></span><div><button id="prevPage" type="button">←</button><button id="nextPage" type="button">→</button></div></div>
+          </section>
+          <details class="card saved-template"><summary>Текст этой очереди</summary><pre id="savedTemplate"></pre></details>
+        </section>
+      </main>
+      <footer class="page-footer">Очередь и журнал хранятся локально. После закрытия вкладки отправка останавливается. При неопределённом результате потребуется проверка диалога.</footer>
+    </div>
+  </div>
+  <dialog id="authDialog"><form id="authForm"><div class="dialog-heading"><div><span class="eyebrow">ВАШ АККАУНТ</span><h2>Подключить Telegram</h2></div><button id="closeAuth" type="button" class="text-button" aria-label="Закрыть">✕</button></div>
+    <p class="muted">Вход через официальный Telegram API. Данные сессии доступны расширению до закрытия браузера.</p>
+    <div id="authFields"><div class="input-pair"><label>API ID<input id="apiId" inputmode="numeric" required autocomplete="off"></label><label>API hash<input id="apiHash" type="password" required autocomplete="off" spellcheck="false"></label></div><p class="help">Получите их в <a href="https://my.telegram.org/apps" target="_blank" rel="noopener noreferrer">my.telegram.org → API development tools ↗</a>.</p><label>Телефон<input id="phone" type="tel" required placeholder="+998…" autocomplete="off"></label></div>
+    <div id="challengeFields" class="hidden"><label id="challengeLabel" for="challengeInput">Код из Telegram</label><input id="challengeInput" autocomplete="off"><p id="challengeHelp" class="help">Откройте Telegram и найдите сообщение с кодом входа.</p></div>
+    <p id="authStatus" class="help" role="status"></p><button id="loginButton" class="primary wide" type="submit">Получить код</button><button id="logoutButton" class="danger wide hidden" type="button">Выйти из аккаунта</button>
+  </form></dialog>
+  <dialog id="confirmDialog"><div class="dialog-heading"><div><span class="eyebrow">ПРОВЕРКА ПЕРЕД ОТПРАВКОЙ</span><h2>Запустить очередь?</h2></div></div><p id="confirmSummary"></p><p id="confirmRecipients" class="muted"></p><div class="message-preview"><img id="confirmImage" class="preview-image hidden" alt="Картинка к сообщению"><p id="confirmMessage"></p></div><p class="help">В журнале сохраняется результат каждой отправки. Пауза действует после завершения текущего запроса.</p><div class="dialog-actions"><button id="cancelSend" type="button">Отмена</button><button id="confirmSend" class="primary" type="button">Отправить</button></div></dialog>
+  <dialog id="suppressionDialog"><div class="dialog-heading"><h2>Список «не писать»</h2><button id="closeSuppression" class="text-button" type="button" aria-label="Закрыть">✕</button></div><p class="muted">Эти никнеймы будут пропускаться во всех очередях.</p><label for="suppressionInput">По одному @username на строку</label><textarea id="suppressionInput" rows="8" spellcheck="false"></textarea><p id="suppressionError" class="help" role="status"></p><button id="saveSuppression" class="primary wide" type="button">Сохранить</button></dialog>
+</body>
+</html>

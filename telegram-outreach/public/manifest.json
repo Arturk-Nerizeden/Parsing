@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Telegram Outreach",
+  "version": "1.0.0",
+  "description": "Сообщения готовому списку Telegram-контактов. Предпросмотр, локальная очередь и история отправок.",
+  "minimum_chrome_version": "120",
+  "permissions": ["storage"],
+  "host_permissions": ["https://*.web.telegram.org/*"],
+  "action": { "default_title": "Открыть Telegram Outreach" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_security_policy": { "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' wss://*.web.telegram.org" }
+}
